@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stortingsdata</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Stortingsdata</h1>
+    <p class="sub">Spørsmål, representanter, komiteer og partier – hentet direkte fra <a href="https://data.stortinget.no" target="_blank" rel="noopener">data.stortinget.no</a></p>
+    <nav id="tabs">
+      <button data-tab="spor" class="active">Spør</button>
+      <button data-tab="stat">Spørsmålsstatistikk</button>
+      <button data-tab="sok">Søk i spørsmål</button>
+      <button data-tab="rep">Representanter</button>
+      <button data-tab="kom">Komiteer</button>
+      <button data-tab="parti">Partier og valgkretser</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Fritekst -->
+  <section id="tab-spor" class="tab active">
+    <div id="nokey" class="notice hidden">
+      Fritekstspørsmål krever en Anthropic API-nøkkel. Legg <code>ANTHROPIC_API_KEY=...</code> i filen <code>.env</code> og start serveren på nytt.
+      De andre fanene virker uten nøkkel.
+    </div>
+    <div id="chat"></div>
+    <form id="askform" class="ask">
+      <textarea id="askinput" rows="2" placeholder="Spør om hva som helst, f.eks. «Hvem i finanskomiteen er fra Hordaland?»"></textarea>
+      <button type="submit" class="primary">Spør</button>
+    </form>
+    <div class="examples">
+      <span>Eksempler:</span>
+      <button type="button">Lag en liste over hvor mange skriftlige spørsmål de ulike representantene har stilt i år</button>
+      <button type="button">Lag en liste over de 10 som har stilt flest skriftlige spørsmål, fordelt på fylke</button>
+      <button type="button">Er det noen som har stilt spørsmål om Hordfast de siste årene?</button>
+      <button type="button">Hvem sitter i næringskomiteen nå?</button>
+      <button type="button">Hvilke representanter har Rogaland, og fra hvilke partier?</button>
+    </div>
+  </section>
+
+  <!-- Statistikk -->
+  <section id="tab-stat" class="tab">
+    <form id="statform" class="filters">
+      <div class="period"></div>
+      <label>Grupper etter
+        <select name="grupper_etter">
+          <option value="representant">Representant</option><option value="fylke">Fylke</option>
+          <option value="parti">Parti</option><option value="minister">Statsråd</option>
+          <option value="maaned">Måned</option><option value="sesjon">Sesjon</option>
+        </select></label>
+      <label>Del opp etter
+        <select name="del_opp_etter">
+          <option value="">(ingen)</option><option value="fylke">Fylke</option><option value="parti">Parti</option>
+          <option value="minister">Statsråd</option>
+        </select></label>
+      <label>Topp <input type="number" name="topp" min="1" placeholder="alle" style="width:5em"></label>
+      <div class="types"></div>
+      <label>Fylke <select name="fylke" class="fylkesel"><option value="">Alle</option></select></label>
+      <label>Parti <select name="parti" class="partisel"><option value="">Alle</option></select></label>
+      <button class="primary">Vis</button>
+    </form>
+    <div id="statout" class="out"></div>
+  </section>
+
+  <!-- Søk -->
+  <section id="tab-sok" class="tab">
+    <form id="sokform" class="filters">
+      <label class="grow">Søkeord <input name="sok" placeholder="f.eks. Hordfast  (bruk OR for alternativer)"></label>
+      <div class="period"></div>
+      <div class="types"></div>
+      <label>Representant <input name="representant" placeholder="navn"></label>
+      <label>Statsråd <input name="minister" placeholder="f.eks. samferdsel"></label>
+      <label>Fylke <select name="fylke" class="fylkesel"><option value="">Alle</option></select></label>
+      <label>Parti <select name="parti" class="partisel"><option value="">Alle</option></select></label>
+      <button class="primary">Søk</button>
+    </form>
+    <div id="sokout" class="out"></div>
+  </section>
+
+  <!-- Representanter -->
+  <section id="tab-rep" class="tab">
+    <form id="repform" class="filters">
+      <label>Navn <input name="navn"></label>
+      <label>Komité <select name="komite" id="komsel"><option value="">Alle</option></select></label>
+      <label>Fylke <select name="fylke" class="fylkesel"><option value="">Alle</option></select></label>
+      <label>Parti <select name="parti" class="partisel"><option value="">Alle</option></select></label>
+      <label class="check"><input type="checkbox" name="vara" value="false"> Skjul vararepresentanter</label>
+      <button class="primary">Vis</button>
+    </form>
+    <div id="repout" class="out"></div>
+  </section>
+
+  <section id="tab-kom" class="tab"><div id="komout" class="out"></div></section>
+  <section id="tab-parti" class="tab"><div id="partiout" class="out"></div></section>
+</main>
+
+<footer class="wrap">Data: Stortinget (data.stortinget.no). Dagens representanter og komitémedlemskap oppdateres hver halvtime.</footer>
+<script src="app.js"></script>
+</body>
+</html>
