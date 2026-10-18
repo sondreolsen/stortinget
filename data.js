@@ -210,7 +210,7 @@ const ST = (() => {
     const members = new Map();
     for (const r of reps) for (const k of r.komiteer) {
       if (!members.has(k.id)) members.set(k.id, []);
-      members.get(k.id).push({ navn: r.navn, parti: r.parti, fylke: r.fylke, vara: r.vara, moter_for: r.moter_for });
+      members.get(k.id).push({ id: r.id, navn: r.navn, parti: r.parti, fylke: r.fylke, vara: r.vara, moter_for: r.moter_for });
     }
     // API-et lister også nedlagte særkomiteer; vis bare komiteer med medlemmer
     return d.komiteer_liste.filter((k) => members.has(k.id)).map((k) => ({

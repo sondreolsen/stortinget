@@ -6,6 +6,36 @@ const nf = new Intl.NumberFormat("nb-NO");
 const fmtDate = (iso) => (iso ? iso.split("-").reverse().join(".") : "");
 let CTX = null; // sesjon, fylker, komiteer, representanter – brukes av fritekst-tolken
 
+/* ---------- Portretter (Stortingets personbilde-API) ---------- */
+const IMG = (id, size) => `https://data.stortinget.no/eksport/personbilde?personid=${encodeURIComponent(id)}&storrelse=${size}&erstatningsbilde=true`;
+function avatar(p, cls = "") {
+  if (!p || !p.id) return "";
+  return `<button type="button" class="avatar ${cls}" data-pid="${esc(p.id)}" data-pname="${esc(p.navn)}" aria-label="Vis større bilde av ${esc(p.navn)}">` +
+    `<img src="${IMG(p.id, "lite")}" srcset="${IMG(p.id, "lite")} 80w, ${IMG(p.id, "middels")} 158w" sizes="(max-width: 640px) 50px, 56px" alt="" loading="lazy" decoding="async" width="56" height="56"></button>`;
+}
+/* Navn med portrett og en dempet undertekst (parti · valgkrets) */
+function personCell(p, nameHtml, sub, cls = "") {
+  return `<div class="person">${avatar(p, cls)}<div class="person-text"><div class="person-name">${nameHtml ?? esc(p.navn)}</div>${sub ? `<div class="person-sub">${sub}</div>` : ""}</div></div>`;
+}
+const partyPlace = (p) => [p.parti, p.fylke].filter(Boolean).map(esc).join(" · ");
+
+/* Klikk på et portrett viser et stort bilde */
+const photoDialog = document.createElement("dialog");
+photoDialog.className = "photo";
+photoDialog.innerHTML = `<img alt=""><div class="photo-cap"></div>`;
+document.body.append(photoDialog);
+photoDialog.addEventListener("click", () => photoDialog.close());
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".avatar");
+  if (!b) return;
+  e.preventDefault();
+  const img = $("img", photoDialog);
+  img.src = IMG(b.dataset.pid, "stort");
+  img.alt = b.dataset.pname;
+  $(".photo-cap", photoDialog).textContent = b.dataset.pname;
+  photoDialog.showModal();
+});
+
 const loading = (el, txt = "Henter data fra Stortinget …") => (el.innerHTML = `<p class="muted"><span class="spinner"></span>${txt}</p>`);
 const fail = (el, e) => (el.innerHTML = `<div class="notice">Feil: ${esc(e.message)}</div>`);
 
@@ -57,10 +87,12 @@ function formParams(form, keys) {
 }
 
 /* ---------- Tabeller og CSV ---------- */
-function table(cols, rows, { bar } = {}) {
+/* Kolonner med csvOnly vises ikke, men tas med i CSV-eksporten */
+function table(allCols, rows, { bar } = {}) {
+  const cols = allCols.filter((c) => !c.csvOnly);
   const max = bar ? Math.max(1, ...rows.map((r) => r[bar])) : 0;
-  return `<div class="table-scroll"><table><thead><tr>${cols.map((c) => `<th class="${c.num ? "num" : ""}">${esc(c.label)}</th>`).join("")}${bar ? "<th class=barcell></th>" : ""}</tr></thead><tbody>
-  ${rows.map((r) => `<tr>${cols.map((c) => `<td class="${c.num ? "num" : ""}">${c.html ? c.html(r) : esc(c.num ? nf.format(r[c.key]) : r[c.key])}</td>`).join("")}${bar ? `<td class=barcell><div class=bar style="width:${(100 * r[bar]) / max}%"></div></td>` : ""}</tr>`).join("")}
+  return `<div class="table-scroll"><table><thead><tr>${cols.map((c) => `<th class="${c.num ? "num" : ""} ${c.cls || ""}">${esc(c.label)}</th>`).join("")}${bar ? "<th class=barcell></th>" : ""}</tr></thead><tbody>
+  ${rows.map((r) => `<tr>${cols.map((c) => `<td class="${c.num ? "num" : ""} ${c.cls || ""}">${c.html ? c.html(r) : esc(c.num ? nf.format(r[c.key]) : r[c.key])}</td>`).join("")}${bar ? `<td class=barcell><div class=bar style="width:${(100 * r[bar]) / max}%"></div></td>` : ""}</tr>`).join("")}
   </tbody></table></div>`;
 }
 function csvButton(name, cols, rows) {
@@ -81,8 +113,8 @@ const GROUP_LABEL = { representant: "Representant", fylke: "Valgkrets", parti: "
 function statCols(g) {
   const cols = [{ label: "#", key: "_rank", num: true }];
   if (g === "representant") cols.push(
-    { label: "Representant", key: "navn", html: (r) => `<a href="#" data-rep="${esc(r.navn)}">${esc(r.navn)}</a>` },
-    { label: "Parti", key: "parti" }, { label: "Valgkrets", key: "fylke" });
+    { label: "Representant", key: "navn", html: (r) => personCell(r, `<a href="#" data-rep="${esc(r.navn)}">${esc(r.navn)}</a>`, partyPlace(r)) },
+    { label: "Parti", key: "parti", csvOnly: true }, { label: "Valgkrets", key: "fylke", csvOnly: true });
   else if (g === "parti") cols.push({ label: "Parti", key: "navn", html: (r) => `${esc(r.parti_navn || r.navn)} <span class=muted>(${esc(r.navn)})</span>` });
   else cols.push({ label: GROUP_LABEL[g], key: "navn" });
   cols.push({ label: "Antall", key: "antall", num: true });
@@ -120,9 +152,10 @@ function renderQuestionList(out, treff, meta, maks = 300) {
   const shown = treff.slice(0, maks);
   out.insertAdjacentHTML("beforeend", `<div class="summary"><span><b>${nf.format(treff.length)}</b> treff · ${esc(periodLabel(meta))}${shown.length < treff.length ? ` · viser de ${shown.length} nyeste` : ""}</span></div>
     <ul class="qlist">${shown.map((q) => `<li>
-      <div class="meta">${esc(fmtDate(q.dato))} · ${esc(q.type_navn)} · <b>${esc(q.fra.navn)}</b> (${esc(q.fra.parti)}, ${esc(q.fra.fylke)}) → ${esc(q.til)}${q.besvart ? "" : ' <span class="tag">ubesvart</span>'}</div>
-      <div>${esc(q.tittel)}</div>
-      <div class="meta" style="margin-top:4px"><a href="#" data-id="${q.id}">Vis svar</a> · <a href="${esc(q.url)}" target="_blank" rel="noopener">stortinget.no</a></div>
+      <div class="q-head">${personCell(q.fra, null, `${partyPlace(q.fra)} → ${esc(q.til)}`)}
+        <div class="q-date">${esc(fmtDate(q.dato))}<br><span>${esc(q.type_navn)}</span>${q.besvart ? "" : '<br><span class="tag">ubesvart</span>'}</div></div>
+      <div class="q-title">${esc(q.tittel)}</div>
+      <div class="meta q-links"><a href="#" data-id="${q.id}">Vis svar</a> · <a href="${esc(q.url)}" target="_blank" rel="noopener">stortinget.no</a></div>
     </li>`).join("")}</ul>`);
   const summary = $$(".summary", out).pop();
   const cols = [{ label: "Dato", key: "dato" }, { label: "Type", key: "type_navn" }, { label: "Fra", key: "_fra" }, { label: "Parti", key: "_parti" }, { label: "Valgkrets", key: "_fylke" }, { label: "Til", key: "til" }, { label: "Spørsmål", key: "tittel" }, { label: "Lenke", key: "url" }];
@@ -156,17 +189,17 @@ async function renderSearch(out, params, { hvem = false } = {}) {
 
 function renderReps(out, reps, tittel) {
   const cols = [
-    { label: "Navn", key: "navn", html: (r) => `${esc(r.navn)}${r.vara ? ` <span class="tag">vara${r.moter_for ? " for " + esc(r.moter_for) : ""}</span>` : ""}` },
-    { label: "Parti", key: "parti" }, { label: "Valgkrets", key: "fylke" },
-    { label: "Komiteer", key: "_kom" }, { label: "E-post", key: "epost", html: (r) => r.epost ? `<a href="mailto:${esc(r.epost)}">${esc(r.epost)}</a>` : "" }];
+    { label: "Representant", key: "navn", html: (r) => personCell(r, `${esc(r.navn)}${r.vara ? ` <span class="tag">vara${r.moter_for ? " for " + esc(r.moter_for) : ""}</span>` : ""}`, partyPlace(r)) },
+    { label: "Parti", key: "parti", csvOnly: true }, { label: "Valgkrets", key: "fylke", csvOnly: true },
+    { label: "Komiteer", key: "_kom" }, { label: "E-post", key: "epost", cls: "hide-sm", html: (r) => r.epost ? `<a href="mailto:${esc(r.epost)}">${esc(r.epost)}</a>` : "" }];
   const rows = reps.map((r) => ({ ...r, _kom: r.komiteer.map((k) => k.navn).join(", ") }));
   out.innerHTML = `<div class="summary"><span>${tittel ? `<b>${esc(tittel)}</b> · ` : ""}<b>${rows.length}</b> representanter (dagens sammensetning)</span></div>${rows.length ? table(cols, rows) : '<p class="muted">Ingen treff.</p>'}`;
   $(".summary", out).append(csvButton("representanter", cols, rows));
 }
 
 function renderCommittees(out, komiteer) {
-  out.innerHTML = `<div class="cards">${komiteer.map((k) => `<div class="card"><h3>${esc(k.navn)} <span class="muted">(${k.antall})</span></h3><ul>${k.medlemmer.map((m) =>
-    `<li>${esc(m.navn)} <span class="muted">${esc(m.parti)}, ${esc(m.fylke)}</span>${m.vara ? ` <span class="tag">vara${m.moter_for ? " for " + esc(m.moter_for) : ""}</span>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>`;
+  out.innerHTML = `<div class="cards">${komiteer.map((k) => `<div class="card"><h3>${esc(k.navn)} <span class="muted">(${k.antall})</span></h3><ul class="people">${k.medlemmer.map((m) =>
+    `<li>${personCell(m, `${esc(m.navn)}${m.vara ? ` <span class="tag">vara${m.moter_for ? " for " + esc(m.moter_for) : ""}</span>` : ""}`, partyPlace(m), "sm")}</li>`).join("")}</ul></div>`).join("")}</div>`;
 }
 function renderParties(out, partier) {
   const pr = [...partier].sort((a, b) => b.mandater_na - a.mandater_na);
