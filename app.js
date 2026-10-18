@@ -50,7 +50,20 @@ function showTab(name) {
     ({ kom: loadKom, parti: loadParti, rep: () => $("#repform").requestSubmit(), stat: () => $("#statform").requestSubmit() })[name]?.();
   }
 }
-$$("#tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+/* Klikk på en fane nullstiller den: skjemaet får standardverdiene og tidligere resultater fjernes.
+   (Når appen selv bytter fane, f.eks. ved klikk på et navn, beholdes filtrene.) */
+function resetTab(name) {
+  const form = $(`#tab-${name} form`);
+  if (form) {
+    form.reset();
+    const per = $("select[name=_periode]", form);
+    if (per) per.dispatchEvent(new Event("change"));
+  }
+  if (name === "spor") $("#chat").innerHTML = "";
+  if (name === "sok") $("#sokout").innerHTML = "";
+  if ((name === "stat" || name === "rep") && loaded[name]) form.requestSubmit();
+}
+$$("#tabs button").forEach((b) => b.addEventListener("click", () => { resetTab(b.dataset.tab); showTab(b.dataset.tab); window.scrollTo({ top: 0 }); }));
 
 /* ---------- Periodevelger og typer ---------- */
 function buildPeriod(container, defaultKey, sesjoner) {
