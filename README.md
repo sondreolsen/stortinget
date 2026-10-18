@@ -36,6 +36,7 @@ Tolken forstår perioder («i år», «i fjor», «siste 3 år», «siden 2020»
 - Tekstsøk går i spørsmålsteksten og emneord, ikke i begrunnelse eller svar.
 - Lange perioder (10+ år) laster mange datasett og kan ta noen sekunder første gang.
 - Siden er ikke en offisiell tjeneste fra Stortinget.
+- Ikonet er laget fra et foto av Stortingsbygningen av Leonhard Lenz, frigitt som CC0 (fri bruk) på [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Stortinget_Oslo_2022-08-17_05.jpg).
 
 ## Kjør lokalt
 
