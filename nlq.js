@@ -138,7 +138,7 @@ const NLQ = (() => {
     m = new RegExp(`(?<![${L}])(?:om|angående|ang\\.|vedrørende|knyttet til|handler om|nevner|nevnt)\\s+(.+)`, "iu").exec(t);
     if (!m) return null;
     let s = m[1];
-    const cut = /(?:^|\s+)(?:de siste|siste|i år|i fjor|siden|fra 20|i 20\d\d|for 20\d\d|denne|forrige|hittil|i løpet|til [\p{L}-]*minister|av (?:representant|stortings)|fordelt|per |og hvem|og hvor|\?|$)/iu;
+    const cut = /(?:^|\s+)(?:de siste|siste|i år|i fjor|siden|fra 20|i 20\d\d|for 20\d\d|denne|forrige|hittil|i løpet|til [\p{L}-]*minister|av (?:representant|stortings)|fordelt|per |som (?:ikke|er|har|enno|ennå)|(?:er |har )?ikke (?:er |blitt |fått )?(?:besvart|svar)|ubesvart|uten svar|venter på svar|og hvem|og hvor|\?|$)/iu;
     s = s.split(cut)[0];
     s = s.replace(/[?.!,]+$/g, "").replace(/^(temaet|saken|tema|prosjektet)\s+/i, "").trim();
     if (!s || STOP.has(s.toLowerCase())) return null;
@@ -199,6 +199,8 @@ const NLQ = (() => {
       const topic = findTopic(t);
       if (rep) { filters.representant = rep.navn; tolkning.unshift("representant: " + rep.navn); }
       if (minister) { filters.minister = minister; tolkning.push("til: " + minister); }
+      if (/ubesvart|ikke (er )?(blitt )?besvart|ikke (har )?fått svar|uten svar|venter på svar/i.test(lower)) { filters.besvart = false; tolkning.push("bare ubesvarte"); }
+      else if (/(?<![\p{L}])besvarte(?![\p{L}])|som er besvart|har fått svar/iu.test(lower)) { filters.besvart = true; tolkning.push("bare besvarte"); }
       if (topic) { filters.sok = topic; tolkning.unshift(`tema: «${topic}»`); }
       const counting = /hvor mange|flest|færrest|mest|minst|topp|rangering|rangér|liste over|oversikt|antall|statistikk|fordelt|(?<![\p{L}])per(?![\p{L}])|hver(t)? |hvilke (parti|fylke|valgkrets|statsråd|minister)/iu.test(lower);
       let p = period?.p, ptxt = period?.txt;

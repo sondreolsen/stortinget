@@ -35,7 +35,8 @@ const ST = (() => {
     if (!m) return null;
     const off = m[2] || "+0000";
     const mins = (off[0] === "-" ? -1 : 1) * (parseInt(off.slice(1, 3)) * 60 + parseInt(off.slice(3)));
-    return new Date(Number(m[1]) + mins * 60000).toISOString().slice(0, 10);
+    const iso = new Date(Number(m[1]) + mins * 60000).toISOString().slice(0, 10);
+    return iso < "1800" ? null : iso; // API-et bruker år 0001 for «ingen dato» (f.eks. ubesvarte spørsmål)
   }
   const todayISO = () => {
     const d = new Date();
@@ -66,12 +67,16 @@ const ST = (() => {
     if (p.vara_representant) o.vara = true;
     return o;
   }
+  // Statuskoder i API-et (status=alle)
+  const STATUS = { 1: "besvart", 2: "bortfalt", 3: "venter på svar", 4: "trukket", 5: "utsatt" };
   function normQuestion(q, type) {
+    const besvartDato = isoDate(q.besvart_dato);
     return {
       id: q.id, type, type_navn: QTYPES[type].navn, sesjon: q.sesjon_id, nummer: q.sporsmal_nummer,
       tittel: (q.tittel || "").trim(),
       dato: isoDate(q.datert_dato) || isoDate(q.sendt_dato),
-      besvart_dato: isoDate(q.besvart_dato), besvart: !!q.besvart_dato,
+      besvart_dato: besvartDato, besvart: q.status === 1 || !!besvartDato,
+      status: STATUS[q.status] || "ukjent status",
       fra: person(q.sporsmal_fra),
       til: q.sporsmal_til_minister_tittel, til_person: person(q.sporsmal_til).navn,
       besvart_av: q.besvart_av_minister_tittel,
@@ -80,7 +85,8 @@ const ST = (() => {
     };
   }
   async function questionsForSession(type, sesjon) {
-    const d = await fetchJSON(QTYPES[type].endpoint, { sesjonid: sesjon });
+    // Uten status=alle returnerer API-et bare besvarte spørsmål
+    const d = await fetchJSON(QTYPES[type].endpoint, { sesjonid: sesjon, status: "alle" });
     return (d.sporsmal_liste || []).map((q) => normQuestion(q, type));
   }
 
@@ -98,11 +104,22 @@ const ST = (() => {
   const matchName = (value, wanted) => !wanted || (value && norm(value).includes(norm(wanted)));
   const asList = (v) => (v == null || v === "" ? [] : Array.isArray(v) ? v : [v]);
 
+  /* Normalisering for tekstsøk: alle slags bindestreker blir mellomrom, og veinavn samles
+     («E 39», «E-39», «riksvei 7» -> «e39», «rv7») så skrivemåten ikke avgjør treffet. */
+  const ROAD = { riksveg: "rv", riksvei: "rv", fylkesveg: "fv", fylkesvei: "fv" };
+  const searchNorm = (s) => String(s || "").toLowerCase()
+    .replace(/[‐-―−-]/g, " ")
+    .replace(/(?<![\p{L}\d])(e|rv|fv|riksveg|riksvei|fylkesveg|fylkesvei)\.?\s*(\d{1,3})(?!\d)/gu, (_, a, n) => (ROAD[a] || a) + n)
+    .replace(/[«»"“”(),.?!:;]/g, " ").replace(/\s+/g, " ");
+  // Enkel stamme for bestemt form o.l. (Storehaugen -> storehaug, vegane -> veg)
+  const stem = (w) => { const s = w.replace(/(ane|ene|en|et|a|er)$/, ""); return s.length >= 5 ? s : w; };
+  const wordHit = (hay, w) => hay.includes(w) || (w.length >= 7 && hay.includes(stem(w)));
+
   /* Søketekst: alle ord må finnes; " OR " / " ELLER " / "|" skiller alternativer. */
   function parseSearch(sok) {
     if (!sok) return null;
-    return sok.split(/\s+(?:OR|ELLER)\s+|\s*\|\s*/).map((a) => a.trim()).filter(Boolean)
-      .map((a) => a.split(/\s+/).map(norm));
+    return sok.split(/\s+(?:OR|ELLER)\s+|\s*\|\s*/).map((a) => searchNorm(a).trim()).filter(Boolean)
+      .map((a) => a.split(" "));
   }
 
   async function getQuestions(f = {}) {
@@ -118,9 +135,11 @@ const ST = (() => {
       if (partier.length && !partier.some((p) => norm(q.fra.parti) === norm(p) || matchName(q.fra.parti_navn, p))) return false;
       if (f.representant && !(norm(q.fra.id) === norm(f.representant) || matchName(q.fra.navn, f.representant))) return false;
       if (f.minister && !(matchName(q.til, f.minister) || matchName(q.besvart_av, f.minister) || matchName(q.til_person, f.minister))) return false;
+      if (f.besvart === true && !q.besvart) return false;
+      if (f.besvart === false && q.besvart) return false;
       if (terms) {
-        const hay = norm(q.tittel + " " + q.emner.join(" "));
-        if (!terms.some((alt) => alt.every((w) => hay.includes(w)))) return false;
+        const hay = searchNorm(q.tittel + " " + q.emner.join(" "));
+        if (!terms.some((alt) => alt.every((w) => wordHit(hay, w)))) return false;
       }
       return true;
     });

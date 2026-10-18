@@ -33,7 +33,8 @@ Tolken forstår perioder («i år», «i fjor», «siste 3 år», «siden 2020»
 ## Verdt å vite
 
 - «Valgkrets»/«fylke» er valgkretsen representanten er valgt fra, med Stortingets (gamle) fylkesnavn.
-- Tekstsøk går i spørsmålsteksten og emneord, ikke i begrunnelse eller svar.
+- Alle spørsmål tas med, også de som venter på svar, er trukket eller har bortfalt. Status vises ved hvert spørsmål, og «Søk i spørsmål» kan filtrere på besvart/ikke besvart. I «Spør» kan du skrive f.eks. «ubesvarte spørsmål til samferdselsministeren».
+- Tekstsøk går i spørsmålsteksten og emneord, ikke i begrunnelse eller svar. Skrivemåter som «E39», «E 39» og «E-39» behandles likt, og bestemt form treffer ubestemt («Storehaugen» finner også «Storehaug»).
 - Lange perioder (10+ år) laster mange datasett og kan ta noen sekunder første gang.
 - Siden er ikke en offisiell tjeneste fra Stortinget.
 - Ikonet er laget fra et foto av Stortingsbygningen av Leonhard Lenz, frigitt som CC0 (fri bruk) på [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Stortinget_Oslo_2022-08-17_05.jpg).

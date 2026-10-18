@@ -153,12 +153,12 @@ function renderQuestionList(out, treff, meta, maks = 300) {
   out.insertAdjacentHTML("beforeend", `<div class="summary"><span><b>${nf.format(treff.length)}</b> treff · ${esc(periodLabel(meta))}${shown.length < treff.length ? ` · viser de ${shown.length} nyeste` : ""}</span></div>
     <ul class="qlist">${shown.map((q) => `<li>
       <div class="q-head">${personCell(q.fra, null, `${partyPlace(q.fra)} → ${esc(q.til)}`)}
-        <div class="q-date">${esc(fmtDate(q.dato))}<br><span>${esc(q.type_navn)}</span>${q.besvart ? "" : '<br><span class="tag">ubesvart</span>'}</div></div>
+        <div class="q-date">${esc(fmtDate(q.dato))}<br><span>${esc(q.type_navn)}</span>${q.besvart ? "" : `<br><span class="tag">${esc(q.status)}</span>`}</div></div>
       <div class="q-title">${esc(q.tittel)}</div>
       <div class="meta q-links"><a href="#" data-id="${q.id}">Vis svar</a> · <a href="${esc(q.url)}" target="_blank" rel="noopener">stortinget.no</a></div>
     </li>`).join("")}</ul>`);
   const summary = $$(".summary", out).pop();
-  const cols = [{ label: "Dato", key: "dato" }, { label: "Type", key: "type_navn" }, { label: "Fra", key: "_fra" }, { label: "Parti", key: "_parti" }, { label: "Valgkrets", key: "_fylke" }, { label: "Til", key: "til" }, { label: "Spørsmål", key: "tittel" }, { label: "Lenke", key: "url" }];
+  const cols = [{ label: "Dato", key: "dato" }, { label: "Type", key: "type_navn" }, { label: "Fra", key: "_fra" }, { label: "Parti", key: "_parti" }, { label: "Valgkrets", key: "_fylke" }, { label: "Til", key: "til" }, { label: "Status", key: "status" }, { label: "Spørsmål", key: "tittel" }, { label: "Lenke", key: "url" }];
   summary.append(csvButton("sporsmal", cols, treff.map((q) => ({ ...q, _fra: q.fra.navn, _parti: q.fra.parti, _fylke: q.fra.fylke }))));
   $$("a[data-id]", out).forEach((a) => a.addEventListener("click", async (e) => {
     e.preventDefault();
@@ -224,6 +224,7 @@ $("#statform").addEventListener("submit", async (ev) => {
 function openSearch(params) {
   const sf = $("#sokform");
   sf.sok.value = params.sok || ""; sf.representant.value = params.representant || ""; sf.minister.value = params.minister || "";
+  sf.besvart.value = params.besvart === true ? "ja" : params.besvart === false ? "nei" : "";
   sf.fylke.value = [].concat(params.fylke || [])[0] || ""; sf.parti.value = [].concat(params.parti || [])[0] || "";
   const ps = $("select[name=_periode]", sf);
   ps.value = "egen"; ps.dispatchEvent(new Event("change"));
@@ -238,6 +239,7 @@ $("#sokform").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const f = ev.target, out = $("#sokout");
   const p = { ...periodParams(f), typer: typesParam(f), ...formParams(f, ["sok", "representant", "minister", "fylke", "parti"]) };
+  if (f.besvart.value) p.besvart = f.besvart.value === "ja";
   loading(out);
   try { await renderSearch(out, p); } catch (e) { fail(out, e); }
 });
