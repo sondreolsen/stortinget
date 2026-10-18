@@ -331,3 +331,6 @@ let ctxReady;
   const q = new URLSearchParams(location.search).get("q");
   if (q) { showTab("spor"); ask(q); }
 })();
+
+/* Klikk på tittelen: tilbake til forsiden (Spør-fanen, uten tidligere svar eller ?q=) */
+$("#home").addEventListener("click", () => { try { localStorage.setItem("tab", "spor"); } catch {} });
