@@ -273,7 +273,6 @@ async function ask(q) {
 }
 $("#askform").addEventListener("submit", (e) => { e.preventDefault(); ask($("#askinput").value); });
 $("#askinput").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(e.target.value); } });
-$$(".examples button").forEach((b) => b.addEventListener("click", () => ask(b.textContent)));
 
 /* ---------- Oppstart ---------- */
 let ctxReady;

@@ -74,10 +74,6 @@ tr:last-child td { border-bottom: 0; }
 #chat details pre { white-space: pre-wrap; font-size: 12px; }
 .ask { display: flex; gap: 8px; align-items: stretch; margin-top: 10px; }
 .ask textarea { flex: 1; resize: vertical; }
-.examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; font-size: 13px; align-items: center; }
-.examples span { color: var(--muted); }
-.examples button { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px 11px; cursor: pointer; color: var(--text); font-size: 13px; text-align: left; }
-.examples button:hover { border-color: var(--accent); }
 .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 footer { color: var(--muted); font-size: 12px; padding-bottom: 30px; }
